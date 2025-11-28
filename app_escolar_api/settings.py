@@ -1,16 +1,21 @@
 import os
-import dj_database_url
-
-ALLOWED_HOSTS = ['*']
+import dj_database_url  # <--- IMPORTANTE: Necesario para Render
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Mantén la clave secreta en variables de entorno en producción
-SECRET_KEY = '-_&+lsebec(whhw!%n@ww&1j=4-^j_if9x8$q778+99oz&!ms2'
+# CLAVE SECRETA
+# En producción real deberías usar variables de entorno, pero por ahora esto funciona.
+SECRET_KEY = os.environ.get('SECRET_KEY', '-_&+lsebec(whhw!%n@ww&1j=4-^j_if9x8$q778+99oz&!ms2')
 
-DEBUG = True  # en desarrollo
+# DEBUG
+# Si estamos en Render, DEBUG será False. Si estamos en local, será True.
+# (Render define automáticamente la variable 'RENDER').
+DEBUG = 'RENDER' not in os.environ
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+# ALLOWED HOSTS
+# El asterisco '*' permite que tu backend responda a la URL que te asigne Render automáticamente.
+ALLOWED_HOSTS = ['*']
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -18,18 +23,18 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_filters',                 # necesarios para los filtros de DRF
+    'django_filters',             # necesarios para los filtros de DRF
     'rest_framework',
-    'rest_framework.authtoken',       # conserva soporte de tokens de DRF
-    'corsheaders',                    # librería CORS actualizada
-    'app_escolar_api',
+    'rest_framework.authtoken',   # conserva soporte de tokens de DRF
+    'corsheaders',                # librería CORS
+    'app_escolar_api',            # Tu aplicación principal
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',    # <--- IMPORTANTE: Whitenoise para archivos estáticos en Render
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',     # CORS debe ir antes de CommonMiddleware
+    'corsheaders.middleware.CorsMiddleware',         # CORS debe ir antes de CommonMiddleware
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -37,25 +42,25 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# Configuración de CORS: define orígenes permitidos y quita CORS_ORIGIN_ALLOW_ALL
+# CONFIGURACIÓN CORS (Conexión con Angular)
+# Esto permite que Vercel y tu Localhost se comuniquen con Django.
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:4200',
+    "http://localhost:4200",
+    # Agrega aquí tu URL de Vercel cuando la tengas, ejemplo:
+    # "https://mi-escuela-app.vercel.app",
 ]
+
+# Si tienes problemas de conexión al inicio, puedes descomentar la siguiente línea
+# para permitir todo temporalmente:
+CORS_ALLOW_ALL_ORIGINS = True 
+
 CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:4200",
+    # "https://mi-escuela-app.vercel.app", 
+]
 
 ROOT_URLCONF = 'app_escolar_api.urls'
-
-
-
-import os
-
-MEDIA_URL = "/media/"
-MEDIA_ROOT = os.path.join(BASE_DIR, "media")
-
-STATIC_URL = "/static/"
-# STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
-# TEMPLATES[0]["DIRS"] = [os.path.join(BASE_DIR, "templates")]
-# STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 
 TEMPLATES = [
     {
@@ -75,6 +80,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'app_escolar_api.wsgi.application'
 
+# ---------------------------------------------------------
+# BASE DE DATOS (HÍBRIDA: MySQL Local / PostgreSQL Render)
+# ---------------------------------------------------------
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
@@ -84,9 +92,17 @@ DATABASES = {
         }
     }
 }
-db_from_env = dj_database_url.config(conn_max_age=600)
-DATABASES['default'].update(db_from_env)
 
+# Configuración automática para Render
+db_from_env = dj_database_url.config(conn_max_age=600)
+
+if db_from_env:
+    # Si detectamos Render, reemplazamos COMPLETAMENTE la configuración
+    # para usar PostgreSQL y evitar el error de 'read_default_file'
+    DATABASES['default'] = db_from_env
+
+
+# VALIDADORES DE CONTRASEÑA
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -94,26 +110,38 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+# INTERNACIONALIZACIÓN
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
+# ---------------------------------------------------------
+# ARCHIVOS ESTÁTICOS (STATIC FILES)
+# ---------------------------------------------------------
 STATIC_URL = '/static/'
 
+# Esto le dice a Django dónde poner los archivos cuando ejecutes 'collectstatic' en Render
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Motor de almacenamiento para Whitenoise (comprime y sirve los archivos en producción)
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+
+# REST FRAMEWORK CONFIG
 REST_FRAMEWORK = {
     'COERCE_DECIMAL_TO_STRING': False,
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.SessionAuthentication',
+        # Asegúrate de que esta ruta sea correcta en tu proyecto:
         'app_escolar_api.models.BearerTokenAuthentication',
     ),
     'DEFAULT_FILTER_BACKENDS': (
         'django_filters.rest_framework.DjangoFilterBackend',
     ),
 }
-
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
