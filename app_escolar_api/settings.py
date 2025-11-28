@@ -46,8 +46,7 @@ MIDDLEWARE = [
 # Esto permite que Vercel y tu Localhost se comuniquen con Django.
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:4200",
-    # Agrega aquí tu URL de Vercel cuando la tengas, ejemplo:
-    # "https://mi-escuela-app.vercel.app",
+    "https://escolar-frontend.vercel.app",
 ]
 
 # Si tienes problemas de conexión al inicio, puedes descomentar la siguiente línea
@@ -57,7 +56,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:4200",
-    # "https://mi-escuela-app.vercel.app", 
+    "https://escolar-frontend.vercel.app", 
 ]
 
 ROOT_URLCONF = 'app_escolar_api.urls'
