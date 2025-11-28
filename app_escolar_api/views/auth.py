@@ -16,44 +16,64 @@ class CustomAuthToken(ObtainAuthToken):
 
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
+        
         if user.is_active:
             # Obtener perfil y roles del usuario
             roles = user.groups.all()
-            role_names = []
-            # Verifico si el usuario tiene un perfil asociado
-            for role in roles:
-                role_names.append(role.name)
-
-            #Si solo es un rol especifico asignamos el elemento 0
-            role_names = role_names[0]
             
-            #Esta función genera la clave dinámica (token) para iniciar sesión
+            if not roles.exists():
+                return Response(
+                    {"detail": "Usuario sin rol asignado"}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Si solo es un rol específico asignamos el elemento 0
+            role_name = roles.first().name.lower()  # Convertir a minúsculas para evitar errores
+            
+            # Esta función genera la clave dinámica (token) para iniciar sesión
             token, created = Token.objects.get_or_create(user=user)
             
-           #Verificar que tipo de usuario quiere iniciar sesión
-            
-            if role_names == 'alumno':
+            # Verificar que tipo de usuario quiere iniciar sesión
+            if role_name == 'alumno':
                 alumno = Alumnos.objects.filter(user=user).first()
-                alumno = AlumnoSerializer(alumno).data
-                alumno["token"] = token.key
-                alumno["rol"] = "alumno"
-                return Response(alumno,200)
-            if role_names == 'maestro':
-                maestro = Maestros.objects.filter(user=user).first()
-                maestro = MaestroSerializer(maestro).data
-                maestro["token"] = token.key
-                maestro["rol"] = "maestro"
-                return Response(maestro,200)
-            if role_names == 'administrador':
-                user = UserSerializer(user, many=False).data
-                user['token'] = token.key
-                user["rol"] = "administrador"
-                return Response(user,200)
-            else:
-                return Response({"details":"Forbidden"},403)
-                pass
+                if not alumno:
+                    return Response(
+                        {"detail": "Perfil de alumno no encontrado"}, 
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+                alumno_data = AlumnoSerializer(alumno).data
+                alumno_data["token"] = token.key
+                alumno_data["rol"] = "alumno"
+                return Response(alumno_data, status=status.HTTP_200_OK)
             
-        return Response({}, status=status.HTTP_403_FORBIDDEN) 
+            elif role_name == 'maestro':
+                maestro = Maestros.objects.filter(user=user).first()
+                if not maestro:
+                    return Response(
+                        {"detail": "Perfil de maestro no encontrado"}, 
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+                maestro_data = MaestroSerializer(maestro).data
+                maestro_data["token"] = token.key
+                maestro_data["rol"] = "maestro"
+                return Response(maestro_data, status=status.HTTP_200_OK)
+            
+            elif role_name == 'administrador':
+                user_data = UserSerializer(user, many=False).data
+                user_data['token'] = token.key
+                user_data["rol"] = "administrador"
+                return Response(user_data, status=status.HTTP_200_OK)
+            
+            else:
+                return Response(
+                    {"detail": f"Rol '{role_name}' no reconocido"}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+        return Response(
+            {"detail": "Usuario inactivo"}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
 
 
 class Logout(generics.GenericAPIView):
@@ -61,15 +81,20 @@ class Logout(generics.GenericAPIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
-
-        print("logout")
         user = request.user
-        print(str(user))
+        
         if user.is_active:
-            token = Token.objects.get(user=user)
-            token.delete()
+            try:
+                token = Token.objects.get(user=user)
+                token.delete()
+                return Response({'logout': True}, status=status.HTTP_200_OK)
+            except Token.DoesNotExist:
+                return Response(
+                    {'detail': 'Token no encontrado'}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
 
-            return Response({'logout':True})
-
-
-        return Response({'logout': False})
+        return Response(
+            {'logout': False, 'detail': 'Usuario inactivo'}, 
+            status=status.HTTP_403_FORBIDDEN
+        )

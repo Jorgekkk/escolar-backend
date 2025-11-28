@@ -29,3 +29,17 @@ class MaestroSerializer(serializers.ModelSerializer):
     class Meta:
         model = Maestros
         fields = '__all__'
+
+class MateriaSerializer(serializers.ModelSerializer):
+    # Campo calculado para devolver el nombre completo del profesor
+    profesor_nombre = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Materias  # Asegúrate de haber agregado la clase Materias en models.py
+        fields = '__all__'
+
+    def get_profesor_nombre(self, obj):
+        # Verifica si hay un profesor asignado y devuelve su nombre completo
+        if obj.profesor and obj.profesor.user:
+            return f"{obj.profesor.user.first_name} {obj.profesor.user.last_name}"
+        return "Sin asignar"

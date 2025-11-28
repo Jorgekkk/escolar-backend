@@ -12,9 +12,12 @@ dist/
 
 # Compiled Python bytecode
 *.py[cod]
+*$py.class
+__pycache__/
 
 # Log files
 *.log
+*.sqlite3
 
 # Package files
 *.jar
@@ -57,3 +60,8 @@ sistema_fcc_api/migrations
 # Upload data
 /uploadData
 .DS_Store
+
+# Entornos virtuales
+venv/
+env/
+.env

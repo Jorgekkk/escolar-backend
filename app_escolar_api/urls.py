@@ -8,7 +8,8 @@ from app_escolar_api.views import users
 from app_escolar_api.views import alumnos
 from app_escolar_api.views import maestros
 from app_escolar_api.views import auth
-
+from app_escolar_api.views.materias import MateriasAll, MateriasView
+from app_escolar_api.views.users import TotalUsers
 
 urlpatterns = [
     #Create Admin
@@ -19,6 +20,8 @@ urlpatterns = [
         #path('admins-edit/', users.AdminsViewEdit.as_view())
      #Create Alumno
         path('alumnos/', alumnos.AlumnosView.as_view()),
+    #Listar Alumnos
+        path('lista-alumnos/', alumnos.AlumnosAll.as_view()),
     #Create Maestro
         path('maestros/', maestros.MaestrosView.as_view()),
     #Listar Maestros
@@ -26,9 +29,16 @@ urlpatterns = [
     #Total de usuarios
         path('total-usuarios/', users.TotalUsers.as_view()),
     #Login
-        path('login/', auth.CustomAuthToken.as_view()),
+        path('login/', auth.CustomAuthToken.as_view(), name='login'),
     #Logout
-        path('logout/', auth.Logout.as_view())
+        path('logout/', auth.Logout.as_view(), name='logout'),
+
+    # Rutas de Materias
+    path('materias-all/', MateriasAll.as_view()),
+    path('materias/', MateriasView.as_view()),
+
+    # Ruta para Gráficas (Ya tenías la lógica en users.py, solo faltaba la url)
+    path('total-users/', TotalUsers.as_view()),
 ]
 
 if settings.DEBUG:
